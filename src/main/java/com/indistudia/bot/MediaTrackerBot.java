@@ -1,6 +1,5 @@
 package com.indistudia.bot;
 
-import com.indistudia.bot.command.Command;
 import com.indistudia.config.AppConfig;
 import com.indistudia.integration.KinopoiskHttpClient;
 import com.indistudia.service.UserService;
@@ -14,16 +13,14 @@ import org.telegram.telegrambots.meta.api.objects.User;
 @Slf4j
 public class MediaTrackerBot extends TelegramLongPollingBot {
     private final AppConfig appConfig;
-
     private final UserService userService;
+    private final CommandResolver commandResolver;
 
     public MediaTrackerBot(AppConfig appConfig, UserService userService, KinopoiskHttpClient kinopoiskHttpClient) {
         super(appConfig.getTelegramConfig().telegramBotToken());
         this.appConfig = appConfig;
-
         this.userService = userService;
-
-        CommandResolver.init(kinopoiskHttpClient);
+        this.commandResolver = new CommandResolver(kinopoiskHttpClient);
     }
 
     @Override
@@ -31,26 +28,7 @@ public class MediaTrackerBot extends TelegramLongPollingBot {
         if (!update.hasMessage() || !update.getMessage().hasText() || update.getMessage().getFrom() == null) {
             return;
         }
-        Message message = update.getMessage();
-
-        Long tgId = message.getChatId();
-        String text = message.getText();
-
-        final User from = message.getFrom();
-
-        userService.getOrCreateByTelegramId(from.getUserName(), from.getId());
-
-        Command handler = null;
-        try {
-            handler = CommandResolver.resolve(text);
-        } catch (Exception e) {
-            execute(tgId, e.getMessage());
-            return;
-        }
-
-        var result = handler.execute(text);
-
-        execute(tgId, result);
+        handleMessage(update.getMessage());
     }
 
     @Override
@@ -58,15 +36,34 @@ public class MediaTrackerBot extends TelegramLongPollingBot {
         return appConfig.getTelegramConfig().telegramBotUsername();
     }
 
-    private void execute(Long chatId, String text) {
+    private void handleMessage(Message message) {
+        Long chatId = message.getChatId();
+        String text = message.getText();
+        User from = message.getFrom();
+
+        userService.getOrCreateByTelegramId(from.getUserName(), from.getId());
+
         try {
-            execute(getSendMessage(chatId, text));
+            CommandResolver.ResolvedCommand resolvedCommand = commandResolver.resolve(text);
+            String result = resolvedCommand.command().execute(resolvedCommand.args());
+            sendMessage(chatId, result);
+        } catch (CommandNotFoundException e) {
+            sendMessage(chatId, e.getMessage());
         } catch (Exception e) {
-            log.atError().addKeyValue("ChatId", chatId).addKeyValue("Error", e.getMessage());
+            log.error("Failed to process message. chatId={}", chatId, e);
+            sendMessage(chatId, "Произошла ошибка при обработке команды.");
         }
     }
 
-    private SendMessage getSendMessage(Long chatId, String text) {
+    private void sendMessage(Long chatId, String text) {
+        try {
+            execute(buildSendMessage(chatId, text));
+        } catch (Exception e) {
+            log.error("Failed to send message. chatId={}", chatId, e);
+        }
+    }
+
+    private SendMessage buildSendMessage(Long chatId, String text) {
         return SendMessage.builder()
                 .chatId(chatId)
                 .text(text)

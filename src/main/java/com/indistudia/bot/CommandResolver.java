@@ -1,28 +1,27 @@
 package com.indistudia.bot;
 
 import com.indistudia.bot.command.Command;
-import com.indistudia.bot.command.ParseFilmCommand;
+import com.indistudia.bot.command.FilmCommand;
 import com.indistudia.bot.command.StartCommand;
 import com.indistudia.integration.KinopoiskHttpClient;
 
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Map;
 
 public class CommandResolver {
+    private final Map<String, Command> commands;
 
-    public static void init(KinopoiskHttpClient kinopoiskHttpClient) {
-        commands = Map.of(
+    public CommandResolver(KinopoiskHttpClient kinopoiskHttpClient) {
+        this.commands = Map.of(
                 "/start", new StartCommand(),
-                "/parse", new ParseFilmCommand(kinopoiskHttpClient)
+                "/film", new FilmCommand(kinopoiskHttpClient)
         );
     }
 
-    static Map<String, Command> commands = new HashMap<>();
-
-    static Command resolve(String message) {
+    public ResolvedCommand resolve(String message) {
         String parsedMessage = message.trim();
-        String[] parts = parsedMessage.split(" ");
-        String commandName = parts[0];
+        String[] parts = parsedMessage.split("\\s+");
+        String commandName = normalizeCommandName(parts[0]);
 
         var commandHandler = commands.get(commandName);
 
@@ -30,6 +29,18 @@ public class CommandResolver {
             throw new CommandNotFoundException();
         }
 
-        return commandHandler;
+        String[] args = Arrays.copyOfRange(parts, 1, parts.length);
+        return new ResolvedCommand(commandHandler, args);
+    }
+
+    private String normalizeCommandName(String rawCommand) {
+        int mentionIndex = rawCommand.indexOf('@');
+        if (mentionIndex <= 0) {
+            return rawCommand;
+        }
+        return rawCommand.substring(0, mentionIndex);
+    }
+
+    public record ResolvedCommand(Command command, String[] args) {
     }
 }
