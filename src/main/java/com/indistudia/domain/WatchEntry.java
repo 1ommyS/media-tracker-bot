@@ -1,5 +1,6 @@
 package com.indistudia.domain;
 
+import com.indistudia.domain.vo.WatchEntryStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,7 +33,8 @@ public class WatchEntry {
     private Media media;
 
     @Column(name = "status", nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private WatchEntryStatus status;
 
     @Column(name = "status_changed_at", nullable = false)
     private LocalDateTime statusChangedAt;

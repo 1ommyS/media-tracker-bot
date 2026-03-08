@@ -1,12 +1,14 @@
 package com.indistudia;
 
+import com.indistudia.bot.MediaTrackerBot;
 import com.indistudia.config.AppConfig;
 import com.indistudia.config.HibernateSessionFactoryProvider;
-import com.indistudia.domain.User;
+import com.indistudia.config.ObjectMapperConfiguration;
+import com.indistudia.config.TransactionSessionManager;
+import com.indistudia.integration.KinopoiskHttpClient;
 import com.indistudia.repository.UserRepository;
+import com.indistudia.service.UserService;
 import org.hibernate.SessionFactory;
-
-import java.time.LocalDateTime;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -15,20 +17,26 @@ public class Main {
         final AppConfig appConfig = AppConfig.load();
         final SessionFactory sessionFactory = HibernateSessionFactoryProvider.build(appConfig);
         Runtime.getRuntime().addShutdownHook(new Thread(sessionFactory::close));
+        final var txSessionManager = new TransactionSessionManager(sessionFactory);
+        final var userRepo = new UserRepository();
+        var jackson = ObjectMapperConfiguration.initJackson();
 
-        UserRepository userRepository = new UserRepository();
+        final UserService userService = new UserService(userRepo, txSessionManager);
 
-        var session = sessionFactory.openSession();
+        KinopoiskHttpClient kinopoiskHttpClient = new KinopoiskHttpClient(appConfig, jackson);
+        MediaTrackerBot mediaTrackerBot = new MediaTrackerBot(appConfig, userService, kinopoiskHttpClient);
 
-        userRepository.save(session, User.builder()
-                .username("ewqewq")
-                .telegramId(2L)
-                .createdAt(LocalDateTime.now())
-                .build());
 
-        var session2 = sessionFactory.openSession();
+        var response = kinopoiskHttpClient.search("Люди в черном", 1).get();
 
-        var user = userRepository.findById(session2, 1);
-        System.out.println(user.orElseThrow(() -> new RuntimeException("User not found")));
+        response.films().forEach(System.out::println);
+
+//        try {
+//            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+//            botsApi.registerBot(mediaTrackerBot);
+//            new CountDownLatch(1).await();
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
     }
 }

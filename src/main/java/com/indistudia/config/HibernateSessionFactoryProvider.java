@@ -1,6 +1,6 @@
 package com.indistudia.config;
 
-import com.indistudia.domain.User;
+import com.indistudia.domain.*;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -23,6 +23,7 @@ public class HibernateSessionFactoryProvider {
         settings.put("hibernate.dialect", appConfig.getHibernateConfig().dialect());
         settings.put("hibernate.show_sql", Boolean.toString(appConfig.getHibernateConfig().showSql()));
         settings.put("hibernate.hbm2ddl.auto", appConfig.getHibernateConfig().hbm2ddlAuto());
+        settings.put("hibernate.auto_commit", "true");
 
         StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySettings(settings)
@@ -31,6 +32,11 @@ public class HibernateSessionFactoryProvider {
         try {
             return new MetadataSources(registry)
                     .addAnnotatedClass(User.class)
+                    .addAnnotatedClass(Media.class)
+                    .addAnnotatedClass(Person.class)
+                    .addAnnotatedClass(WatchEntry.class)
+                    .addAnnotatedClass(MediaPersonRole.class)
+                    .addAnnotatedClass(Review.class)
                     .buildMetadata()
                     .buildSessionFactory();
         } catch (Exception e) {

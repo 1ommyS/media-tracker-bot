@@ -1,10 +1,12 @@
 package com.indistudia.repository;
 
 import com.indistudia.domain.User;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Session;
 
 import java.util.Optional;
 
+@Slf4j
 public class UserRepository {
 
     public Optional<User> findByTelegramId(Session session, Long telegramId) {
@@ -17,7 +19,13 @@ public class UserRepository {
         return Optional.ofNullable(session.find(User.class, id));
     }
 
-    public void save(Session session, User user) {
-        session.persist(user);
+    public boolean save(Session session, User user) {
+        try {
+            session.persist(user);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return false;
+        }
+        return true;
     }
 }
