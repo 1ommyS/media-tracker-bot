@@ -10,7 +10,7 @@ public record FilmSearchResponse(
 ) {
 
     public record FilmDto(
-            long filmId,
+            Long filmId,
             String nameRu,
             String nameEn,
             String type,

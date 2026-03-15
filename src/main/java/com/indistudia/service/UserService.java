@@ -1,5 +1,6 @@
 package com.indistudia.service;
 
+import com.indistudia.cache.CacheProvider;
 import com.indistudia.config.TransactionSessionManager;
 import com.indistudia.domain.User;
 import com.indistudia.repository.UserRepository;
@@ -17,7 +18,15 @@ public class UserService {
     private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     public Optional<User> findByTelegramId(Long telegramId) {
-        return transactionSessionManager.inSession(session -> userRepository.findByTelegramId(session, telegramId));
+        var fromCache = CacheProvider.get("USER-" + telegramId);
+
+        if (fromCache != null) {
+            return (Optional<User>) fromCache;
+        }
+
+        var user = transactionSessionManager.inSession(session -> userRepository.findByTelegramId(session, telegramId));
+        CacheProvider.set("USER-" + telegramId, user);
+        return user;
     }
 
     public User findById(int userId) {

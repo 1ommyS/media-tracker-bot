@@ -7,7 +7,10 @@ import com.indistudia.config.HibernateSessionFactoryProvider;
 import com.indistudia.config.ObjectMapperConfiguration;
 import com.indistudia.config.TransactionSessionManager;
 import com.indistudia.integration.KinopoiskHttpClient;
+import com.indistudia.repository.MediaRepository;
 import com.indistudia.repository.UserRepository;
+import com.indistudia.service.FilmsProxy;
+import com.indistudia.service.MediaService;
 import com.indistudia.service.UserService;
 import org.hibernate.SessionFactory;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -22,8 +25,10 @@ public class Main {
         registerShutdownHook(sessionFactory);
 
         UserService userService = createUserService(sessionFactory);
+        MediaService mediaService = createMediaService(sessionFactory);
         KinopoiskHttpClient kinopoiskHttpClient = createKinopoiskHttpClient(appConfig);
-        MediaTrackerBot mediaTrackerBot = createBot(appConfig, userService, kinopoiskHttpClient);
+        FilmsProxy filmsProxy = new FilmsProxy(mediaService, kinopoiskHttpClient);
+        MediaTrackerBot mediaTrackerBot = createBot(appConfig, userService, filmsProxy);
 
         startBot(mediaTrackerBot);
     }
@@ -42,6 +47,12 @@ public class Main {
         return new UserService(userRepo, txSessionManager);
     }
 
+    private static MediaService createMediaService(SessionFactory sessionFactory) {
+        TransactionSessionManager txSessionManager = new TransactionSessionManager(sessionFactory);
+        var mediaRepo = new MediaRepository();
+        return new MediaService(mediaRepo, txSessionManager);
+    }
+
     private static KinopoiskHttpClient createKinopoiskHttpClient(AppConfig appConfig) {
         ObjectMapper jackson = ObjectMapperConfiguration.initJackson();
         return new KinopoiskHttpClient(appConfig, jackson);
@@ -50,10 +61,11 @@ public class Main {
     private static MediaTrackerBot createBot(
             AppConfig appConfig,
             UserService userService,
-            KinopoiskHttpClient kinopoiskHttpClient
+            FilmsProxy filmsProxy
     ) {
-        return new MediaTrackerBot(appConfig, userService, kinopoiskHttpClient);
+        return new MediaTrackerBot(appConfig, userService, filmsProxy);
     }
+
 
     private static void startBot(MediaTrackerBot mediaTrackerBot) {
         try {

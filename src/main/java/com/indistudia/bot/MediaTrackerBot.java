@@ -1,7 +1,8 @@
 package com.indistudia.bot;
 
 import com.indistudia.config.AppConfig;
-import com.indistudia.integration.KinopoiskHttpClient;
+import com.indistudia.service.FilmsProxy;
+import com.indistudia.service.MediaService;
 import com.indistudia.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -16,11 +17,11 @@ public class MediaTrackerBot extends TelegramLongPollingBot {
     private final UserService userService;
     private final CommandResolver commandResolver;
 
-    public MediaTrackerBot(AppConfig appConfig, UserService userService, KinopoiskHttpClient kinopoiskHttpClient) {
+    public MediaTrackerBot(AppConfig appConfig, UserService userService, FilmsProxy filmsProxy) {
         super(appConfig.getTelegramConfig().telegramBotToken());
         this.appConfig = appConfig;
         this.userService = userService;
-        this.commandResolver = new CommandResolver(kinopoiskHttpClient);
+        this.commandResolver = new CommandResolver(filmsProxy);
     }
 
     @Override

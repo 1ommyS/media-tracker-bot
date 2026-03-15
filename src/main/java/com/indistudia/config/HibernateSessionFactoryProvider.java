@@ -24,6 +24,7 @@ public class HibernateSessionFactoryProvider {
         settings.put("hibernate.show_sql", Boolean.toString(appConfig.getHibernateConfig().showSql()));
         settings.put("hibernate.hbm2ddl.auto", appConfig.getHibernateConfig().hbm2ddlAuto());
         settings.put("hibernate.auto_commit", "true");
+        settings.put("hibernate.physical_naming_strategy", "org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl");
 
         StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySettings(settings)

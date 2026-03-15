@@ -1,16 +1,17 @@
 package com.indistudia.bot.command;
 
-import com.indistudia.integration.KinopoiskHttpClient;
-import com.indistudia.integration.dto.FilmSearchResponse;
+import com.indistudia.domain.Media;
+import com.indistudia.service.FilmsProxy;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.List;
 
+@Slf4j
 @RequiredArgsConstructor
 public class FilmCommand implements Command {
     private static final int FILM_LIMIT = 5;
-    private final KinopoiskHttpClient httpClient;
+    private final FilmsProxy filmsProxy;
 
     @Override
     public String execute(String... args) {
@@ -20,9 +21,9 @@ public class FilmCommand implements Command {
             return "Укажи название фильма: /film Интерстеллар";
         }
 
-        Optional<FilmSearchResponse> searchResponse = httpClient.search(query, 1);
+        List<Media> searchResponse = filmsProxy.findFilms(query);
 
-        if (searchResponse.isEmpty() || searchResponse.get().films() == null || searchResponse.get().films().isEmpty()) {
+        if (searchResponse.isEmpty()) {
             return "По запросу \"" + query + "\" ничего не найдено.";
         }
 
@@ -30,7 +31,7 @@ public class FilmCommand implements Command {
                 .append(query)
                 .append("\":\n\n");
 
-        searchResponse.get().films()
+        searchResponse
                 .stream()
                 .limit(FILM_LIMIT)
                 .forEach(film -> messageBuilder.append(formatFilm(film)).append("\n\n"));
@@ -38,33 +39,12 @@ public class FilmCommand implements Command {
         return messageBuilder.toString().trim();
     }
 
-    private String formatFilm(FilmSearchResponse.FilmDto film) {
-        String title = firstNonBlank(film.nameRu(), film.nameEn(), "Без названия");
-        String year = firstNonBlank(film.year(), "-");
-        String rating = firstNonBlank(film.rating(), "-");
-        String genres = film.genres() == null || film.genres().isEmpty()
-                ? "не указаны"
-                : film.genres().stream()
-                .map(FilmSearchResponse.GenreDto::genre)
-                .filter(genre -> genre != null && !genre.isBlank())
-                .limit(3)
-                .collect(Collectors.joining(", "));
 
-        if (genres.isBlank()) {
-            genres = "не указаны";
-        }
+    private String formatFilm(Media film) {
+        String title = film.getTitle();
+        String year = film.getYear().toString();
 
         return "- " + title + " (" + year + ")\n"
-                + "  Рейтинг: " + rating + "\n"
-                + "  Жанры: " + genres;
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
+                + " MediaId: " + film.getExternalId() + "\n";
     }
 }

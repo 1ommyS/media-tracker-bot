@@ -3,7 +3,7 @@ package com.indistudia.bot;
 import com.indistudia.bot.command.Command;
 import com.indistudia.bot.command.FilmCommand;
 import com.indistudia.bot.command.StartCommand;
-import com.indistudia.integration.KinopoiskHttpClient;
+import com.indistudia.service.FilmsProxy;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -11,10 +11,10 @@ import java.util.Map;
 public class CommandResolver {
     private final Map<String, Command> commands;
 
-    public CommandResolver(KinopoiskHttpClient kinopoiskHttpClient) {
+    public CommandResolver(FilmsProxy filmsProxy) {
         this.commands = Map.of(
                 "/start", new StartCommand(),
-                "/film", new FilmCommand(kinopoiskHttpClient)
+                "/film", new FilmCommand(filmsProxy)
         );
     }
 
