@@ -35,17 +35,8 @@ public class FilmCommand implements Command {
         searchResponse
                 .stream()
                 .limit(FILM_LIMIT)
-                .forEach(film -> messageBuilder.append(formatFilm(film)).append("\n\n"));
+                .forEach(film -> messageBuilder.append(film.formatFilm()).append("\n\n"));
 
         return messageBuilder.toString().trim();
-    }
-
-
-    private String formatFilm(Media film) {
-        String title = film.getTitle();
-        String year = film.getYear().toString();
-
-        return "- " + title + " (" + year + ")\n"
-                + " MediaId: " + film.getExternalId() + "\n";
     }
 }

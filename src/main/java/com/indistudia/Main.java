@@ -3,8 +3,9 @@ package com.indistudia;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.indistudia.bot.MediaTrackerBot;
 import com.indistudia.bot.statemachine.BotStateMachine;
-import com.indistudia.bot.statemachine.InMemoryWizardStateMachine;
 import com.indistudia.bot.statemachine.NoopBotStateMachine;
+import com.indistudia.bot.statemachine.flow.wizard.WizardFlow;
+import com.indistudia.cache.CacheProvider;
 import com.indistudia.config.AppConfig;
 import com.indistudia.config.HibernateSessionFactoryProvider;
 import com.indistudia.config.ObjectMapperConfiguration;
@@ -29,17 +30,22 @@ public class Main {
         SessionFactory sessionFactory = createSessionFactory(appConfig);
         registerShutdownHook(sessionFactory);
 
+        CacheProvider.startCleanUpTask();
+
         UserService userService = createUserService(sessionFactory);
         MediaService mediaService = createMediaService(sessionFactory);
         WatchEntryService watchEntryService = createWatchEntryService(sessionFactory);
         KinopoiskHttpClient kinopoiskHttpClient = createKinopoiskHttpClient(appConfig);
         FilmsProxy filmsProxy = new FilmsProxy(mediaService, kinopoiskHttpClient);
+        WizardFlow wizardFlow = createWizardFlow(filmsProxy, watchEntryService);
+
         MediaTrackerBot mediaTrackerBot = createBot(
                 appConfig,
                 userService,
                 filmsProxy,
                 mediaService,
-                watchEntryService
+                watchEntryService,
+                wizardFlow
         );
 
         startBot(mediaTrackerBot);
@@ -47,6 +53,10 @@ public class Main {
 
     private static SessionFactory createSessionFactory(AppConfig appConfig) {
         return HibernateSessionFactoryProvider.build(appConfig);
+    }
+
+    private static WizardFlow createWizardFlow(FilmsProxy filmsProxy, WatchEntryService watchEntryService) {
+        return new WizardFlow(filmsProxy, watchEntryService);
     }
 
     private static void registerShutdownHook(SessionFactory sessionFactory) {
@@ -75,26 +85,18 @@ public class Main {
             UserService userService,
             FilmsProxy filmsProxy,
             MediaService mediaService,
-            WatchEntryService watchEntryService
+            WatchEntryService watchEntryService,
+            BotStateMachine botStateMachine
     ) {
-        return new MediaTrackerBot(appConfig, userService, filmsProxy, mediaService, watchEntryService);
+        if (botStateMachine == null) botStateMachine = new NoopBotStateMachine();
+
+        return new MediaTrackerBot(appConfig, userService, filmsProxy, mediaService, watchEntryService, botStateMachine);
     }
 
     private static WatchEntryService createWatchEntryService(SessionFactory sessionFactory) {
         TransactionSessionManager txSessionManager = new TransactionSessionManager(sessionFactory);
         var watchEntryRepository = new WatchEntryRepository();
         return new WatchEntryService(watchEntryRepository, txSessionManager);
-    }
-
-    private static BotStateMachine createBotStateMachine(
-            FilmsProxy filmsProxy,
-            MediaService mediaService,
-            WatchEntryService watchEntryService
-    ) {
-        if (filmsProxy == null || mediaService == null || watchEntryService == null) {
-            return new NoopBotStateMachine();
-        }
-        return new InMemoryWizardStateMachine(filmsProxy, mediaService, watchEntryService);
     }
 
 

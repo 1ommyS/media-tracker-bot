@@ -30,7 +30,8 @@ public class CommandResolver {
                 "/film", new FilmCommand(filmsProxy),
                 "/progress", new ProgressCommand(mediaService, watchEntryService),
                 "/history", new HistoryCommand(watchEntryService),
-                "/flow", new FlowCommand(botStateMachine)
+                "/flow", new FlowCommand(botStateMachine),
+                "/wizard", new WizardCommand(botStateMachine)
         );
     }
 

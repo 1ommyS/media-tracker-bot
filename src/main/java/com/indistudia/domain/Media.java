@@ -35,4 +35,9 @@ public class Media {
     private String posterUrl;
 
     private LocalDateTime updatedAt;
+
+    public String formatFilm() {
+        return "- " + title + " (" + year + ")\n"
+                + " MediaId: " + externalId + "\n";
+    }
 }

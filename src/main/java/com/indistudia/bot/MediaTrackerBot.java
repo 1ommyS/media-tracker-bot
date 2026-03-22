@@ -21,32 +21,6 @@ public class MediaTrackerBot extends TelegramLongPollingBot {
     private final CommandResolver commandResolver;
     private final BotStateMachine botStateMachine;
 
-    /**
-     * Совместимый конструктор по умолчанию.
-     *
-     * <p>Создает бота с noop-реализацией FSM. Это позволяет уже сейчас использовать DI-контракт,
-     * но не менять поведение в рантайме до появления полноценной реализации state machine.
-     */
-    public MediaTrackerBot(
-            AppConfig appConfig,
-            UserService userService,
-            FilmsProxy filmsProxy,
-            MediaService mediaService,
-            WatchEntryService watchEntryService
-    ) {
-        this(appConfig, userService, filmsProxy, mediaService, watchEntryService, new NoopBotStateMachine());
-    }
-
-    /**
-     * Основной конструктор с внедрением state machine.
-     *
-     * <p>Через этот конструктор можно подключить любую реализацию FSM без изменения логики бота:
-     * <ul>
-     *   <li>обработка пошаговых сценариев будет делегирована в {@code botStateMachine};</li>
-     *   <li>обычные slash-команды продолжают работать через {@link CommandResolver};</li>
-     *   <li>если FSM не обработала сообщение, выполняется обычный командный пайплайн.</li>
-     * </ul>
-     */
     public MediaTrackerBot(
             AppConfig appConfig,
             UserService userService,
