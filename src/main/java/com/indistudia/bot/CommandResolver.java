@@ -1,9 +1,10 @@
 package com.indistudia.bot;
 
-import com.indistudia.bot.command.Command;
-import com.indistudia.bot.command.FilmCommand;
-import com.indistudia.bot.command.StartCommand;
+import com.indistudia.bot.command.*;
+import com.indistudia.bot.statemachine.BotStateMachine;
 import com.indistudia.service.FilmsProxy;
+import com.indistudia.service.MediaService;
+import com.indistudia.service.WatchEntryService;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -11,10 +12,25 @@ import java.util.Map;
 public class CommandResolver {
     private final Map<String, Command> commands;
 
-    public CommandResolver(FilmsProxy filmsProxy) {
+    /**
+     * Конструктор роутера команд.
+     *
+     * <p>Точка расширения для FSM заложена здесь:
+     * при добавлении полноценной реализации достаточно передать нужный {@link BotStateMachine},
+     * не меняя публичный API команд.
+     */
+    public CommandResolver(
+            FilmsProxy filmsProxy,
+            MediaService mediaService,
+            WatchEntryService watchEntryService,
+            BotStateMachine botStateMachine
+    ) {
         this.commands = Map.of(
                 "/start", new StartCommand(),
-                "/film", new FilmCommand(filmsProxy)
+                "/film", new FilmCommand(filmsProxy),
+                "/progress", new ProgressCommand(mediaService, watchEntryService),
+                "/history", new HistoryCommand(watchEntryService),
+                "/flow", new FlowCommand(botStateMachine)
         );
     }
 

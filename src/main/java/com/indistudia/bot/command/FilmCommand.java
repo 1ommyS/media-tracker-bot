@@ -1,5 +1,6 @@
 package com.indistudia.bot.command;
 
+import com.indistudia.bot.CommandContext;
 import com.indistudia.domain.Media;
 import com.indistudia.service.FilmsProxy;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ public class FilmCommand implements Command {
     private final FilmsProxy filmsProxy;
 
     @Override
-    public String execute(String... args) {
+    public String execute(CommandContext context, String... args) {
         String query = String.join(" ", args).trim();
 
         if (query.isBlank()) {

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.hibernate.Session;
 
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public class MediaRepository {
@@ -21,5 +22,16 @@ public class MediaRepository {
         return session.createQuery(hql, Media.class)
                 .setParameter("query", query)
                 .getResultList();
+    }
+
+    public Optional<Media> findByExternalId(Session session, String externalId) {
+        String hql = """
+                from Media m
+                where m.externalId = :externalId
+                """;
+
+        return session.createQuery(hql, Media.class)
+                .setParameter("externalId", externalId)
+                .uniqueResultOptional();
     }
 }

@@ -1,9 +1,12 @@
 package com.indistudia.bot;
 
 import com.indistudia.config.AppConfig;
+import com.indistudia.bot.statemachine.BotStateMachine;
+import com.indistudia.bot.statemachine.NoopBotStateMachine;
 import com.indistudia.service.FilmsProxy;
 import com.indistudia.service.MediaService;
 import com.indistudia.service.UserService;
+import com.indistudia.service.WatchEntryService;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -16,12 +19,47 @@ public class MediaTrackerBot extends TelegramLongPollingBot {
     private final AppConfig appConfig;
     private final UserService userService;
     private final CommandResolver commandResolver;
+    private final BotStateMachine botStateMachine;
 
-    public MediaTrackerBot(AppConfig appConfig, UserService userService, FilmsProxy filmsProxy) {
+    /**
+     * Совместимый конструктор по умолчанию.
+     *
+     * <p>Создает бота с noop-реализацией FSM. Это позволяет уже сейчас использовать DI-контракт,
+     * но не менять поведение в рантайме до появления полноценной реализации state machine.
+     */
+    public MediaTrackerBot(
+            AppConfig appConfig,
+            UserService userService,
+            FilmsProxy filmsProxy,
+            MediaService mediaService,
+            WatchEntryService watchEntryService
+    ) {
+        this(appConfig, userService, filmsProxy, mediaService, watchEntryService, new NoopBotStateMachine());
+    }
+
+    /**
+     * Основной конструктор с внедрением state machine.
+     *
+     * <p>Через этот конструктор можно подключить любую реализацию FSM без изменения логики бота:
+     * <ul>
+     *   <li>обработка пошаговых сценариев будет делегирована в {@code botStateMachine};</li>
+     *   <li>обычные slash-команды продолжают работать через {@link CommandResolver};</li>
+     *   <li>если FSM не обработала сообщение, выполняется обычный командный пайплайн.</li>
+     * </ul>
+     */
+    public MediaTrackerBot(
+            AppConfig appConfig,
+            UserService userService,
+            FilmsProxy filmsProxy,
+            MediaService mediaService,
+            WatchEntryService watchEntryService,
+            BotStateMachine botStateMachine
+    ) {
         super(appConfig.getTelegramConfig().telegramBotToken());
         this.appConfig = appConfig;
         this.userService = userService;
-        this.commandResolver = new CommandResolver(filmsProxy);
+        this.botStateMachine = botStateMachine;
+        this.commandResolver = new CommandResolver(filmsProxy, mediaService, watchEntryService, botStateMachine);
     }
 
     @Override
@@ -42,11 +80,22 @@ public class MediaTrackerBot extends TelegramLongPollingBot {
         String text = message.getText();
         User from = message.getFrom();
 
-        userService.getOrCreateByTelegramId(from.getUserName(), from.getId());
+        var appUser = userService.getOrCreateByTelegramId(from.getUserName(), from.getId());
+        CommandContext commandContext = new CommandContext(appUser);
+
+        // FR: если у пользователя активный сценарий, сначала даем FSM шанс обработать сообщение.
+        // Реальная логика шагов пока отсутствует, но точка расширения уже зафиксирована.
+        if (botStateMachine.hasActiveFlow(commandContext)) {
+            var flowReply = botStateMachine.tryHandle(commandContext, text);
+            if (flowReply.isPresent()) {
+                sendMessage(chatId, flowReply.get());
+                return;
+            }
+        }
 
         try {
             CommandResolver.ResolvedCommand resolvedCommand = commandResolver.resolve(text);
-            String result = resolvedCommand.command().execute(resolvedCommand.args());
+            String result = resolvedCommand.command().execute(commandContext, resolvedCommand.args());
             sendMessage(chatId, result);
         } catch (CommandNotFoundException e) {
             sendMessage(chatId, e.getMessage());

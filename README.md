@@ -37,6 +37,14 @@ docker compose up -d
 
 3. Запустить приложение из IDE, указав `com.indistudia.Main` как entry point.
 
+## Команды бота
+
+- `/start` — список доступных команд
+- `/film <название>` — поиск фильма по названию
+- `/progress <mediaId> <status>` — обновить прогресс по фильму (`planned`, `watching`, `completed`, `dropped`)
+- `/history <N>` — показать историю последних N фильмов (по времени обновления статуса)
+- `/flow start` — запустить черновую точку входа для будущего state machine-сценария
+
 ## База данных
 
 Docker Compose автоматически применяет схему из `src/main/resources/db/schema.sql` и создает таблицы:
